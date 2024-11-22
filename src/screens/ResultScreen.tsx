@@ -1,28 +1,55 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { useSelector, useDispatch } from 'react-redux';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { useSelector } from 'react-redux';
 import { RootState } from '../redux/store';
-import { calculateScore } from '../redux/answersSlice';
+import api from '../services/api';
+
+interface OptionPayload {
+  text: string;
+  score: number;
+}
+
+interface QuestionnairePayload {
+  question: string;
+  options: OptionPayload[];
+}
 
 export default function ResultScreen() {
-  const dispatch = useDispatch();
-  const totalScore = useSelector((state: RootState) => state.answers.totalScore);
+  const answers = useSelector((state: RootState) => state.answers.answers);
+  const [riskProfile, setRiskProfile] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    dispatch(calculateScore());
-  }, [dispatch]);
+    const submitAnswers = async () => {
+      const questionnairePayload: QuestionnairePayload[] = Object.entries(answers).map(([questionId, score]) => ({
+        question: `Question ${questionId}`,
+        options: [{ text: `Answer for Question ${questionId}`, score }]
+      }));
 
-  const getRiskProfile = (score: number): string => {
-    if (score <= 7) return 'Low Risk';
-    if (score <= 12) return 'Medium Risk';
-    return 'High Risk';
-  };
+      try {
+        const response = await api.post('/questionnaire/submit', questionnairePayload);
+        console.log('response', response)
+        setRiskProfile(response.data.riskProfile);
+      } catch (error) {
+        console.error('Failed to submit answers:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    submitAnswers();
+  }, [answers]);
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Your Risk Profile</Text>
-      <Text style={styles.score}>Score: {totalScore}</Text>
-      <Text style={styles.category}>{getRiskProfile(totalScore)}</Text>
+      {loading ? (
+        <ActivityIndicator size="large" />
+      ) : (
+        <View>
+          <Text style={styles.title}>Your Risk Profile</Text>
+          <Text style={styles.category}>{riskProfile}</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -30,6 +57,5 @@ export default function ResultScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   title: { fontSize: 24, fontWeight: 'bold' },
-  score: { fontSize: 20, marginVertical: 10 },
   category: { fontSize: 18 },
 });
