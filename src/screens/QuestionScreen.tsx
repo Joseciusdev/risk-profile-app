@@ -30,6 +30,8 @@ export default function QuestionScreen({ navigation, route }: Props) {
     }
   };
 
+  console.log('question', question)
+
   return (
     <View style={styles.container}>
       <Text style={styles.question}>{question.question}</Text>
