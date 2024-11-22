@@ -1,27 +1,33 @@
 import React from 'react';
-import { render } from '@testing-library/react-native';
-import { Provider } from 'react-redux';
-import configureStore from 'redux-mock-store';
+import { render, waitFor } from '@testing-library/react-native';
+import { useSelector } from 'react-redux';
+import api from '../../src/services/api';
 import ResultScreen from '../../src/screens/ResultScreen';
 
-const mockStore = configureStore([]);
+jest.mock('../services/api');
+jest.mock('react-redux', () => ({
+  useSelector: jest.fn(),
+}));
 
 describe('ResultScreen', () => {
-  it('should display total score and risk profile category', () => {
-    const store = mockStore({
-      answers: {
-        totalScore: 10,
-      },
-    });
+  it('should display risk profile after API call', async () => {
+    const mockRiskProfile = 'Moderate Risk';
+    const mockAnswers = { 1: 5, 2: 10 };
+    (useSelector as jest.Mock).mockReturnValue({ answers: mockAnswers });
+    (api.post as jest.Mock).mockResolvedValueOnce({ data: { riskProfile: mockRiskProfile } });
 
-    const { getByText } = render(
-      <Provider store={store}>
-        <ResultScreen />
-      </Provider>
-    );
+    const { getByText } = render(<ResultScreen />);
 
-    expect(getByText('Your Risk Profile')).toBeTruthy();
-    expect(getByText('Score: 10')).toBeTruthy();
-    expect(getByText('Medium Risk')).toBeTruthy();
+    // Wait for the API response and check the rendered risk profile
+    await waitFor(() => expect(getByText('Your Risk Profile')).toBeTruthy());
+    expect(getByText(mockRiskProfile)).toBeTruthy();
+  });
+
+  it('should show loading indicator while fetching data', () => {
+    const mockAnswers = { 1: 5, 2: 10 };
+    (useSelector as jest.Mock).mockReturnValue({ answers: mockAnswers });
+
+    const { getByTestId } = render(<ResultScreen />);
+    expect(getByTestId('loading-indicator')).toBeTruthy();
   });
 });

@@ -1,5 +1,6 @@
 import { Question } from '../types';
 
+// sample data
 const questions: Question[] = [
   {
     id: 1,
